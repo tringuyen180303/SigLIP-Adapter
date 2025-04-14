@@ -1,0 +1,7 @@
+venv/
+data/
+__pycache__/
+models/
+cache/
+images/
+datasets/__pycache__

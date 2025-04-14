@@ -1,0 +1,188 @@
+import os
+import random
+import argparse
+import yaml
+from tqdm import tqdm
+
+import torch
+import torch.nn.functional as F
+import torch.nn as nn
+import torchvision.transforms as transforms
+from utils import *
+from open_clip import create_model_from_pretrained, get_tokenizer
+from datasets import OxfordPetsDataset
+from torch.utils.data import DataLoader
+def run_siglip(cfg, img_cache_keys, text_cache_keys, cache_values, val_features, val_labels, test_labels, test_features, model_weights): 
+    cache_keys = (img_cache_keys + text_cache_keys)/2
+
+    zero_logits = 100. * val_features @ model_weights
+    print("zero logits", zero_logits)    
+    print("zero logits", zero_logits.shape) 
+    acc = classification_acc(zero_logits, val_labels)
+
+    print(f"Zero-shot accuracy SigLIP: {acc:.2f}%")
+    
+    # Adapter
+    beta, alpha = cfg['idea']['beta'], cfg['idea']['alpha']
+    affinity = val_features @ cache_keys.T
+    few_logits = ((-1) * (beta - beta * affinity)).exp() @ cache_values
+
+    idea_logits = (few_logits * alpha) + zero_logits # SigLIP
+    acc = classification_acc(idea_logits, val_labels)
+    print(f"SigLIP with adapter: {acc:.2f}%")
+
+    ### Search hyperparameters
+    best_theta, best_beta, best_alpha = 2, 0.2, 0.3
+
+    print("\n-------- Evaluating on the test set. --------")
+
+    # Zero-shot CLIP
+    zero_logits = 100. * test_features @ model_weights
+    acc = classification_acc(zero_logits, test_labels)
+    print("\n**** Zero-shot CLIP's test accuracy: {:.2f}. ****\n".format(acc))
+
+    # IDEA-Adapter    
+    affinity = best_theta * test_features @ text_cache_keys + (1-best_theta) * test_features @ img_cache_keys
+    few_logits = ((-1) * (best_beta - best_beta * affinity)).exp() @ cache_values
+    
+    idea_logits = zero_logits + few_logits * best_alpha
+    acc = classification_acc(idea_logits, test_labels)
+    print("**** IDEA-Adapter's test accuracy: {:.2f}. ****\n".format(acc))
+
+
+def run_TSGILIP(cfg, img_cache_keys, text_cache_keys, cache_values, val_features, val_labels, test_labels, test_features, model_weights, model,  train_loader_F):
+    adapter = nn.Linear(img_cache_keys.shape[0], img_cache_keys[0], bias=True).to(model.dtype)
+    adapter2 = nn.Linear(img_cache_keys.shape[0], img_cache_keys.shape[1], bias=True).to(model.dtype)
+
+    optimizer = torch.optim.AdamW(
+        [{
+            "params": adapter.parameters()
+        },
+        {
+            "params": adapter2.parameters()
+        }], lr=0.001, eps=1e-4
+    )
+    scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, cfg['training']['epochs'] * len(train_loader_F))
+    beta, alpha = cfg['idea']['beta'], cfg['idea']['alpha']
+    best_acc, best_epoch = 0.0, 0
+
+    for train_idx in range(cfg['training']['epochs']):
+        # Train
+        adapter.train()
+        adapter2.train()
+        correct_samples, all_samples = 0, 0
+        loss_list = []
+        print('Train Epoch: {:} / {:}'.format(train_idx, cfg['training'['epochs']]))
+
+        for i, (images, target, dess) in enumerate(tqdm(train_loader_F)):
+            with torch.no_grad():
+                image_features = model.encode_image(images)
+                image_features /= image_features.norm(dim=-1, keepdim=True)
+            image_feature_text = adapter(image_features)
+            affinity2 = adapter2(image_features)
+
+            affinity =  (image_feature_text @ text_cache_keys + image_features @ img_cache_keys + image_features @ text_cache_keys)/3
+            affinity += affinity2
+
+            few_logits = ((-1) * (beta - beta * affinity)).exp() @ cache_values
+            zero_logits = 100. * image_features @ model_weights
+
+            TIDEA_logits = TIDEA_logits = zero_logits + few_logits * alpha
+
+            loss = F.cross_entropy(TIDEA_logits, target)
+
+            acc = classification_acc(TIDEA_logits, target)
+            correct_samples += acc / 100 * len(TIDEA_logits)
+            all_samples += len(TIDEA_logits)
+            loss_list.append(loss.item())
+
+            optimizer.zero_grad()
+            loss.backward()
+            optimizer.step()
+            scheduler.step()
+
+        current_lr = scheduler.get_last_lr()[0]
+        print('LR: {:.6f}, Acc: {:.4f} ({:}/{:}), Loss: {:.4f}'.format(current_lr, correct_samples / all_samples, correct_samples, all_samples, sum(loss_list)/len(loss_list)))
+
+        # Evaluation
+
+        adapter.eval()
+        adapter2.eval()
+        test_feature_text = adapter(test_features)
+        affinity2 = adapter2(test_features)
+
+        affinity = (test_feature_text @ text_cache_keys + test_features @ img_cache_keys + test_features @ text_cache_keys)/3
+        affinity += affinity2
+
+        few_logits = ((-1) * (beta - beta * affinity)).exp() @ cache_values
+        zero_logits = 100. * test_features @ model_weights
+        TIDEA_logits = zero_logits + few_logits * alpha
+        acc = classification_acc(TIDEA_logits, test_labels)
+
+        print("**** IDEA-Adapter-F's test accuracy: {:.2f}. ****\n".format(acc))
+        if acc > best_acc:
+            best_acc = acc
+            best_epoch = train_idx
+            torch.save(adapter, cfg['model']['cache_dir'] + "/best_F_" + str(cfg['shots']) + "shots.pt")
+            torch.save(adapter2, cfg['model']['cache_dir'] + "/best_F_2_" + str(cfg['shots']) + "shots.pt")
+
+        adapter = torch.load(cfg['cache_dir'] + "/best_F_" + str(cfg['shots']) + "shots.pt")
+        adapter2 = torch.load(cfg['cache_dir'] + "/best_F_2_" + str(cfg['shots']) + "shots.pt")
+        print(f"**** After fine-tuning, IDEA-Adapter-F's best test accuracy: {best_acc:.2f}, at epoch: {best_epoch}. ****\n")
+
+        best_theta, best_beta, best_alpha = 2, 0.5, 0.5
+
+        print("\n-------- Evaluating on the test set. --------")
+
+        test_features_text = adapter(test_features)
+        affinity2 = adapter2(test_features)
+        affinity = best_theta* (test_features_text + test_features) @ text_cache_keys + (1-best_theta) * test_features @ img_cache_keys
+        affinity += affinity2
+        few_logits = ((-1) * (best_beta - best_beta * affinity)).exp() @ cache_values
+        TIDEA_logits = zero_logits + few_logits * best_alpha
+        acc = classification_acc(TIDEA_logits, test_labels)
+        print("**** IDEA-Adapter-F's test accuracy: {:.2f}. ****\n".format(max(best_acc, acc)))
+def main():
+    # Load config file
+    cfg = load_config("config.yaml")
+    # Load SigLIP
+    model, preprocess = create_model_from_pretrained('hf-hub:timm/ViT-B-16-SigLIP')
+    print("model context length", model.context_length)
+    model.eval()
+    random.seed(1)
+    torch.manual_seed(1)
+
+
+    transform = transforms.Compose([
+        transforms.Resize((224, 224)),
+        transforms.ToTensor(),
+        transforms.Normalize(mean=[0.485, 0.456, 0.406],
+                             std= [0.229, 0.224, 0.225])]
+    )
+    root_path = "./data/oxfordpets"
+    
+    val_dataset = OxfordPetsDataset(root_path, split='val', transform=transform, val_ratio=0.1)
+    test_dataset = OxfordPetsDataset(root_path, split='test', transform=transform, val_ratio=0.1)
+    val_loader = DataLoader(val_dataset, batch_size=32, shuffle=True, num_workers=4)
+    test_loader = DataLoader(test_dataset, batch_size=32, shuffle=True, num_workers=4)
+
+    # Build cache loader
+    train_dataset = OxfordPetsDataset(root_path, split='train', transform=transform, num_shots=4)
+    train_loader_cache = DataLoader(train_dataset, batch_size=32, shuffle=False, num_workers=4)
+    tran_loader_F = DataLoader(train_dataset, batch_size=32, shuffle=True, num_workers=4)
+
+    model_weights = model_classifier(train_dataset.classnames, train_dataset.template, model)
+
+    im_cache_keys, text_cache_keys, cache_values = build_cache_model(cfg, model, train_loader_cache)
+
+    # Preload features
+    val_features, val_labels = extract_features(model, val_loader)
+    test_features, test_labels = extract_features(model, test_loader)
+
+    run_siglip(cfg, im_cache_keys, text_cache_keys, cache_values, val_features, val_labels, test_features, test_labels, model_weights)
+
+# cfg = load_config() # Load configuration
+# dataset = build_dataset(cfg['dataset_name'], cfg['root_path'], cfg['shots']) # Build dataset
+    
+if __name__ == "__main__":
+    main()

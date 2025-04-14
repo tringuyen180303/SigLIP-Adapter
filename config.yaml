@@ -1,0 +1,36 @@
+# config.yaml
+
+# General experiment settings
+experiment_name: "IdeaAdapterTest"
+seed: 42
+
+# Data settings
+data:
+  dataset_name: "OxfordPets"
+  shots: 4                # number of few-shot samples per class
+  num_classes: 1000
+
+# Model settings
+model:
+  name: "SigLIP"           # name or type of the model to load
+  load_cache: false        # whether to load precomputed keys from disk
+  cache_dir: "./cache"     # directory to save or load cache files
+  augment_epoch: 1         # how many times to augment data for the cache
+
+# IDEA / TIP-Adapter hyperparameters
+idea:
+  beta: 2.0
+  alpha: 0.5
+  theta: 0.5
+
+# Training settings (if you do any partial finetuning)
+training:
+  epochs: 5
+  batch_size: 32
+  lr: 1e-4
+
+# Logging
+logging:
+  log_interval: 10
+  save_checkpoint: true
+  checkpoint_dir: "./checkpoints"
