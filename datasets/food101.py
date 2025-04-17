@@ -1,7 +1,7 @@
 import os
 import random
 from PIL import Image
-from utils import DatasetBase
+from datasets.utils import DatasetBase
 template = ['a photo of {}, a type of food.']
 
 class Food101Dataset(DatasetBase):
