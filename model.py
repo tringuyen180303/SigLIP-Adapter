@@ -56,7 +56,12 @@ def run_siglip(cfg, img_cache_keys, text_cache_keys, cache_values, val_features,
 
 
 def run_TSGILIP(cfg, img_cache_keys, text_cache_keys, cache_values, val_features, val_labels, test_labels, test_features, model_weights, model,  train_loader_F):
-    adapter = nn.Linear(img_cache_keys.shape[0], img_cache_keys[0], bias=True)
+    print("img cache keys", img_cache_keys.shape)
+    print("img cache 0", img_cache_keys.shape[0])
+    print("img cache 1", img_cache_keys.shape[1])
+
+
+    adapter = nn.Linear(img_cache_keys.shape[0], img_cache_keys.shape[0], bias=True)
     adapter2 = nn.Linear(img_cache_keys.shape[0], img_cache_keys.shape[1], bias=True)
 
     optimizer = torch.optim.AdamW(
@@ -88,11 +93,11 @@ def run_TSGILIP(cfg, img_cache_keys, text_cache_keys, cache_values, val_features
 
             affinity =  (image_feature_text @ text_cache_keys + image_features @ img_cache_keys + image_features @ text_cache_keys)/3
             affinity += affinity2
-
+            cache_values = cache_values.float()
             few_logits = ((-1) * (beta - beta * affinity)).exp() @ cache_values
             zero_logits = 100. * image_features @ model_weights
 
-            TIDEA_logits = TIDEA_logits = zero_logits + few_logits * alpha
+            TIDEA_logits = zero_logits + few_logits * alpha
 
             loss = F.cross_entropy(TIDEA_logits, target)
 
@@ -128,14 +133,20 @@ def run_TSGILIP(cfg, img_cache_keys, text_cache_keys, cache_values, val_features
         if acc > best_acc:
             best_acc = acc
             best_epoch = train_idx
-            torch.save(adapter, cfg['model']['cache_dir'] + "/best_F_" + str(cfg['shots']) + "shots.pt")
-            torch.save(adapter2, cfg['model']['cache_dir'] + "/best_F_2_" + str(cfg['shots']) + "shots.pt")
+            best_f_path  = os.path.join(cfg['model']['cache_dir'],
+                            f"best_F_{cfg['data']['shots']}shots.pt")
+            best_f2_path = os.path.join(cfg['model']['cache_dir'],
+                            f"best_F_2_{cfg['data']['shots']}shots.pt")
+            torch.save(adapter.state_dict(),  best_f_path)
+            torch.save(adapter2.state_dict(), best_f2_path)
 
-        adapter = torch.load(cfg['cache_dir'] + "/best_F_" + str(cfg['shots']) + "shots.pt")
-        adapter2 = torch.load(cfg['cache_dir'] + "/best_F_2_" + str(cfg['shots']) + "shots.pt")
+        adapter.load_state_dict(torch.load(best_f_path))
+        adapter2.load_state_dict(torch.load(best_f2_path))
         print(f"**** After fine-tuning, IDEA-Adapter-F's best test accuracy: {best_acc:.2f}, at epoch: {best_epoch}. ****\n")
 
-        best_theta, best_beta, best_alpha = 2, 0.5, 0.5
+        #best_theta, best_beta, best_alpha = 2, 0.5, 0.5
+        best_theta, best_beta, best_alpha = 0.05, 3.22, 0.73
+        #best_theta, best_beta, best_alpha = search_hp_2(cfg, img_cache_keys, text_cache_keys, cache_values, val_features, val_labels, model_weights)
 
         print("\n-------- Evaluating on the test set. --------")
 
@@ -143,6 +154,7 @@ def run_TSGILIP(cfg, img_cache_keys, text_cache_keys, cache_values, val_features
         affinity2 = adapter2(test_features)
         affinity = best_theta* (test_features_text + test_features) @ text_cache_keys + (1-best_theta) * test_features @ img_cache_keys
         affinity += affinity2
+        cache_values = cache_values.float()
         few_logits = ((-1) * (best_beta - best_beta * affinity)).exp() @ cache_values
         TIDEA_logits = zero_logits + few_logits * best_alpha
         acc = classification_acc(TIDEA_logits, test_labels)
@@ -168,13 +180,13 @@ def main():
     
     val_dataset = OxfordPetsDataset(root_path, split='val', transform=transform, val_ratio=0.1)
     test_dataset = OxfordPetsDataset(root_path, split='test', transform=transform, val_ratio=0.1)
-    val_loader = DataLoader(val_dataset, batch_size=32, shuffle=True, num_workers=4)
-    test_loader = DataLoader(test_dataset, batch_size=32, shuffle=True, num_workers=4)
+    val_loader = DataLoader(val_dataset, batch_size=cfg['training']['batch_size'], shuffle=True, num_workers=4)
+    test_loader = DataLoader(test_dataset, batch_size=cfg['training']['batch_size'], shuffle=True, num_workers=4)
 
     # Build cache loader
-    train_dataset = OxfordPetsDataset(root_path, split='train', transform=transform, num_shots=4)
-    train_loader_cache = DataLoader(train_dataset, batch_size=32, shuffle=False, num_workers=4)
-    train_loader_F = DataLoader(train_dataset, batch_size=32, shuffle=True, num_workers=4)
+    train_dataset = OxfordPetsDataset(root_path, split='train', transform=transform, num_shots=cfg['data']['shots'])
+    train_loader_cache = DataLoader(train_dataset, batch_size=cfg['training']['batch_size'], shuffle=False, num_workers=4)
+    train_loader_F = DataLoader(train_dataset, batch_size=cfg['training']['batch_size'], shuffle=True, num_workers=4)
 
     model_weights = model_classifier(train_dataset.classnames, train_dataset.template, model)
 

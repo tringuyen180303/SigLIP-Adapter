@@ -27,10 +27,10 @@ import os
 #     return accuracy
 def classification_acc(output, target, topk=1):
     pred = output.topk(topk, 1, True, True)[1].t()
-    print("pred", pred)
+    #print("pred", pred)
     if target.dim() == 2:               # one‑hot → indices
         target = target.argmax(dim=1) 
-    print("target", target)
+    #print("target", target)
     correct = pred.eq(target.view(1, -1).expand_as(pred))
     acc = float(correct[: topk].reshape(-1).float().sum(0, keepdim=True).cpu().numpy())
     acc = 100 * acc / target.shape[0]
@@ -57,7 +57,6 @@ def build_cache_model(cfg, model, train_loader_cache):
                 train_text_features = []
                 print(f'Augment Epoch: {augment_idx + 1} / {augment_epoch}')
                 for i, (images, target, dess) in enumerate(tqdm(train_loader_cache)):
-                    #texts = clip.tokenize(dess, truncate=True).cuda()
                     tokenizer = get_tokenizer('hf-hub:timm/ViT-B-16-SigLIP')
                     texts = tokenizer(dess, context_length=model.context_length)
                     text_features = model.encode_text(texts)
