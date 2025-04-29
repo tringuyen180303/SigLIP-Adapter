@@ -8,7 +8,7 @@ Yet re-training or full fine-tuning remains costly, and naïvely ignoring
 the cross-modal information hidden in image–text pairs leaves accuracy
 on the table. This is fixed by the Enhanced CLIP-Adapter ((T)IDEA) framework, which
 introduces a mutli-modal adapter instead of the vision focused adapter. This allows
-us to train the adapter on the image–text pairs. [(T)IDEA](https://github.com/FourierAI/IDEA)
+us to train the adapter on the image–description pairs. [(T)IDEA Repository](https://github.com/FourierAI/IDEA)
 
 We introduce **SigLIP-Adapter**, a lightweight add-on that upgrades
 Google’s **SigLIP** (Sigmoid Loss CLIP) for both zero-shot and few-shot
@@ -28,6 +28,14 @@ inference **without** touching the frozen backbone.
    Two adapter blocks (projector + latent mixer) are trained for a handful
    of epochs, then frozen. They reweight the similarities and improve
    accuracy—especially when only 1-16 shots per class are available.
+
+## Good Text Generation Examples
+
+![Good Text Generation Examples](text_generation_examples\Good_Text_Generation_Examples.png)
+
+## Bad Text Generation Examples
+
+![Bad Text Generation Examples](text_generation_examples\Bad_Text_Generation_Examples.png)
 
 ---
 
