@@ -6,7 +6,9 @@ with the *same frozen backbone* they already achieve impressive
 **zero-shot** and **few-shot** accuracy on dozens of datasets.  
 Yet re-training or full fine-tuning remains costly, and naïvely ignoring
 the cross-modal information hidden in image–text pairs leaves accuracy
-on the table.
+on the table. This is fixed by the Enhanced CLIP-Adapter ((T)IDEA) framework, which
+introduces a mutli-modal adapter instead of the vision focused adapter. This allows
+us to train the adapter on the image–text pairs. [(T)IDEA](https://github.com/FourierAI/IDEA)
 
 We introduce **SigLIP-Adapter**, a lightweight add-on that upgrades
 Google’s **SigLIP** (Sigmoid Loss CLIP) for both zero-shot and few-shot
@@ -27,7 +29,6 @@ inference **without** touching the frozen backbone.
    of epochs, then frozen. They reweight the similarities and improve
    accuracy—especially when only 1-16 shots per class are available.
 
-
 ---
 
 ## 1  Set-up
@@ -46,17 +47,18 @@ script | vision-language model(s) | note
 generate_caption_llama.py | LLaMA encoder + BART-Large summariser | baseline
 generate_caption_smolVLM.py | SmolVLM-256M-Instruct + T5-Small | ★ fast & memory-light
 
-```
+```bash
 # example
-python generate_caption_llama.py
+python generate_captions/generate_caption_llama.py
 
 # example
-python generate_caption_smolVLM.py
+python generate_captions/generate_caption_smolVLM.py
 
 ```
 
 ## 3 Run the five benchmark experiments
-```
+
+```bash
 # Oxford-IIIT Pets   (37 classes)
 python model_oxfordpets.py
 
@@ -72,4 +74,3 @@ python model_dtd.py
 # Caltech-101        (101 object categories)
 python model_caltech101.py
 ```
-
