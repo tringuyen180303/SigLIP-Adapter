@@ -6,11 +6,7 @@ from transformers import AutoProcessor, AutoModelForVision2Seq, T5ForConditional
 from torchvision import transforms
 from torch.utils.data import DataLoader
 
-# 1) SmolVLM setup
-# if torch.backends.mps.is_available() and torch.backends.mps.is_built():
-#     DEVICE = torch.device("mps")
-#     torch_dtype = torch.float32
-#     attn_impl  = "eager"
+
 if torch.cuda.is_available():
     DEVICE = torch.device("cuda")
     torch_dtype = torch.bfloat16
@@ -21,7 +17,7 @@ else:
     attn_impl  = "eager"
 print(f"Using device: {DEVICE}")
 
-MODEL_ID = "HuggingFaceTB/SmolVLM-Instruct"
+MODEL_ID = "HuggingFaceTB/SmolVLM-256M-Instruct"
 processor = AutoProcessor.from_pretrained(MODEL_ID)
 model     = AutoModelForVision2Seq.from_pretrained(
     MODEL_ID,

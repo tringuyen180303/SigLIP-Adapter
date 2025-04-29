@@ -6,10 +6,10 @@ seed: 42
 
 # Data settings
 data:
-  dataset_name: "OxfordPets"
-  shots: 16                # number of few-shot samples per class
-  overwrite: false
-  cache_root: "./feature_cache"
+  dataset_name: "Food101"
+  shots: 1                # number of few-shot samples per class
+  overwrite: true
+  cache_root: "./feature_cache/food-101"
 
 # Model settings
 model:

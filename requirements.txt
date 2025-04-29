@@ -1,6 +1,8 @@
 torch
-urlib
 pillow
 open-clip-torch
 transformers
 pyyaml
+sentencepiece
+clip
+pandas

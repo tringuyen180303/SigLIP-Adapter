@@ -6,3 +6,5 @@ cache/
 images/
 datasets/__pycache__
 feature_cache/
+wrong_summary.txt
+.DS_Store
