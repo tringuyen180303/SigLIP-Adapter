@@ -54,3 +54,22 @@ python generate_caption_llama.py
 python generate_caption_smolVLM.py
 
 ```
+
+## 3 Run the five benchmark experiments
+```
+# Oxford-IIIT Pets   (37 classes)
+python model_oxfordpets.py
+
+# Food-101           (101 classes)
+python model_food101.py
+
+# EuroSAT            (10 land-use classes)
+python model_eurosat.py
+
+# DTD (Describable Textures, 47 classes)
+python model_dtd.py
+
+# Caltech-101        (101 object categories)
+python model_caltech101.py
+```
+
