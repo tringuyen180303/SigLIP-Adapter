@@ -64,7 +64,9 @@ pip install -r requirements.txt
 ## 2 Generate Captions
 
 script | vision-language model(s) | note
+
 generate_caption_llama.py | LLaMA encoder + BART-Large summariser | baseline
+
 generate_caption_smolVLM.py | SmolVLM-256M-Instruct + T5-Small | ★ fast & memory-light
 
 ```bash
