@@ -49,6 +49,18 @@ source .venv/bin/activate
 pip install -r requirements.txt
 ```
 
+Download the datasets and place them in the `data/` folder.
+
+[Oxford Pets](https://www.kaggle.com/datasets/tanlikesmath/the-oxfordiiit-pet-dataset)
+
+[Food101](https://www.kaggle.com/datasets/dansbecker/food-101)
+
+[Caltech-101](https://data.caltech.edu/records/mzrjq-6wc02)
+
+[EuroSat](https://www.kaggle.com/datasets/apollo2506/eurosat-dataset)
+
+[Describable Textures Dataset](https://www.kaggle.com/datasets/jmexpert/describable-textures-dataset-dtd)
+
 ## 2 Generate Captions
 
 script | vision-language model(s) | note
