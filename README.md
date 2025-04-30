@@ -29,13 +29,25 @@ inference **without** touching the frozen backbone.
    of epochs, then frozen. They reweight the similarities and improve
    accuracy—especially when only 1-16 shots per class are available.
 
+
+## Text Generation Pipeline
+![Good Text Generation Examples](/text_generation_examples/Text_Pipeline.png)
+
+
 ## Good Text Generation Examples
 
-![Good Text Generation Examples](text_generation_examples\Good_Text_Generation_Examples.png)
+![Good Text Generation Examples](/text_generation_examples/Good_Text_Generation_Examples.png)
 
 ## Bad Text Generation Examples
 
-![Bad Text Generation Examples](text_generation_examples\Bad_Text_Generation_Examples.png)
+![Bad Text Generation Examples](/text_generation_examples/Bad_Text_Generation_Examples.png)
+
+
+
+## Slides and Papers
+
+- [SigLIP-Adapter slides](https://github.com/tringuyen180303/SigLIP-Adapter/blob/main/docs/SigLIP_Adapter.pptx)
+- [Project report](https://github.com/tringuyen180303/SigLIP-Adapter/blob/main/docs/SigLIP-Adapter.pdf)
 
 ---
 
@@ -64,7 +76,9 @@ Download the datasets and place them in the `data/` folder.
 ## 2 Generate Captions
 
 script | vision-language model(s) | note
+
 generate_caption_llama.py | LLaMA encoder + BART-Large summariser | baseline
+
 generate_caption_smolVLM.py | SmolVLM-256M-Instruct + T5-Small | ★ fast & memory-light
 
 ```bash
