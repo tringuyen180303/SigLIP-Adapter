@@ -46,9 +46,8 @@ inference **without** touching the frozen backbone.
 
 ## Slides and Papers
 
-[SigLIP-Adapter slides](docs/SigLIP_Adapter_Presentation.pptx)
-
-[Project report](docs/SigLIP_Adapter_Report.pdf)
+- [SigLIP-Adapter slides](https://github.com/tringuyen180303/SigLIP-Adapter/blob/main/docs/SigLIP_Adapter.pptx)
+- [Project report](https://github.com/tringuyen180303/SigLIP-Adapter/blob/main/docs/SigLIP-Adapter.pdf)
 
 ---
 
