@@ -29,13 +29,26 @@ inference **without** touching the frozen backbone.
    of epochs, then frozen. They reweight the similarities and improve
    accuracy—especially when only 1-16 shots per class are available.
 
+
+## Text Generation Pipeline
+![Good Text Generation Examples](/text_generation_examples/Text_Pipeline.png)
+
+
 ## Good Text Generation Examples
 
-![Good Text Generation Examples](text_generation_examples\Good_Text_Generation_Examples.png)
+![Good Text Generation Examples](/text_generation_examples/Good_Text_Generation_Examples.png)
 
 ## Bad Text Generation Examples
 
-![Bad Text Generation Examples](text_generation_examples\Bad_Text_Generation_Examples.png)
+![Bad Text Generation Examples](/text_generation_examples/Bad_Text_Generation_Examples.png)
+
+
+
+## Slides and Papers
+
+[SigLIP-Adapter slides](docs/SigLIP_Adapter_Presentation.pptx)
+
+[Project report](docs/SigLIP_Adapter_Report.pdf)
 
 ---
 
